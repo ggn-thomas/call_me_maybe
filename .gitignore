@@ -1,0 +1,5 @@
+en.subject.pdf
+
+.venv/
+
+src/__pycache__/
