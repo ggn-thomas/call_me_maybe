@@ -1,5 +1,13 @@
 en.subject.pdf
 
 .venv/
+scratch/
 
-src/__pycache__/
+__pycache__/
+*.py[cod]
+
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+.DS_Store

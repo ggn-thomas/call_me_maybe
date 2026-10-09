@@ -1,23 +1,42 @@
-import argparse
-# from pathlib import Path
+from argparse import Namespace, ArgumentParser
+from .loader import load_functions, load_prompts
+import json
+from pydantic import ValidationError
+from .decoder import decoder
 
-def parsing() -> int:
-    parser = argparse.ArgumentParser()
-    path1 = "data/input/function_calling_tests.json"
-    path2 = "data/input/functions_definition.json"
-    parser.add_argument('--functions_definition', type=str, default=path1)
-    parser.add_argument('--input', type=str, default=path2)
-    parser.add_argument('--output', type=str, default=None)
+def parsing() -> Namespace:
+    parser = ArgumentParser()
+    default_input = "data/input/function_calling_tests.json"
+    default_functions = "data/input/functions_definition.json"
+    default_output = "data/output/function_calling_results.json"
+    parser.add_argument('--functions_definition', type=str, 
+                        default=default_functions)
+    parser.add_argument('--input', type=str, default=default_input)
+    parser.add_argument('--output', type=str, default=default_output)
 
     args = parser.parse_args()
-    print(f"functions_definition path: {args.functions_definition}")
-    print(f"input path: {args.input}")
 
-    return 1
+    return args
 
-def main():
-    if parsing():
-        return None
 
+def main() -> int:
+    args = parsing()
+    try:
+        functions = load_functions(args.functions_definition)
+        prompts = load_prompts(args.input)
+    except FileNotFoundError as e:
+        print(f"Error: file not found: {e.filename}")
+        return 1
+    except json.JSONDecodeError as e:
+        print(f"Error: invalid JSON: {e}")
+        return 1
+    except ValidationError as e:
+        print(f"Error: unexpected file structure\n{e}")
+        return 1
+
+    decoder(prompts, functions)
+
+    return 0
+  
 if __name__ == "__main__":
     main()
