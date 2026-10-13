@@ -1,8 +1,11 @@
 from argparse import Namespace, ArgumentParser
+from llm_sdk import Small_LLM_Model
 from .loader import load_functions, load_prompts
 import json
 from pydantic import ValidationError
 from .decoder import decoder
+from .generator import generator
+from .vocab import load_vocab
 
 def parsing() -> Namespace:
     parser = ArgumentParser()
@@ -20,6 +23,10 @@ def parsing() -> Namespace:
 
 
 def main() -> int:
+    model = Small_LLM_Model()
+    path = model.get_path_to_vocab_file()
+    vocab = load_vocab(path)
+
     args = parsing()
     try:
         functions = load_functions(args.functions_definition)
@@ -34,9 +41,11 @@ def main() -> int:
         print(f"Error: unexpected file structure\n{e}")
         return 1
 
-    decoder(prompts, functions)
+    results = decoder(model, prompts, functions, vocab)
+
+    print(results)
 
     return 0
-  
+
 if __name__ == "__main__":
     main()
