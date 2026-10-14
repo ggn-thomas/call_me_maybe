@@ -1,14 +1,8 @@
 import json
 from llm_sdk import Small_LLM_Model
-from .models import PromptEntry, FunctionDefinition, ParameterSpec
+from .models import PromptEntry, FunctionDefinition
 from .generator import generator
-
-def build_ouput(parameters: dict[str, ParameterSpec]) -> str:
-    output = []
-    ouput.append(f"name: {name}, ")
-    for name, spec in parameters.items():
-        signature.append(f"{name}: {spec.type}")
-    return ", ".join(signature)
+from .vocab import allowed_number_ids, allowed_string_ids, allowed_ids
 
 def build_header(functions: list[FunctionDefinition]) -> str:
     """
@@ -19,30 +13,49 @@ def build_header(functions: list[FunctionDefinition]) -> str:
         lines.append(f"{f.name}: {f.description}")
     return "\n".join(lines)
 
-def build_prompt(header: str, prompt: str) -> str:
+def build_prompt_ft(header: str, prompt: str) -> str:
     return f'Choose the most suitable function for the request.\nRequest: {prompt}\n{header}\nCall: {{"name": "'
+
+def build_prompt_js(json_partial: str, prompt: str) -> str:
+    return f'Prompt:{prompt}\nComplete the JSON object by extracting the appropriate parameter values from the prompt.\n{json_partial}'
 
 def fetch_function(name: str, functions: list[FunctionDefinition]) -> FunctionDefinition:
     for f in functions:
         if f.name == name:
             return f
     return None
-    
+
 def decoder(model: Small_LLM_Model, prompts: list[PromptEntry], functions: list[FunctionDefinition], vocab: dict[int, str]) -> list[str]:
     header = build_header(functions)
-    targets = [f.name for f in functions]
+    ft_targets = [f.name for f in functions]
+    by_name = {f.name: f for f in functions}
 
     results = []
     for entry in prompts:
-        full = build_prompt(header, entry.prompt)
-        input_ids = model.encode(full)[0].tolist()
-        name = generator(model, input_ids, targets, vocab)
+        prompt_ft = build_prompt_ft(header, entry.prompt)
+        prompt_ft_ids = model.encode(prompt_ft)[0].tolist()
+        name = generator(model, prompt_ft_ids, allowed_ids, vocab, ft_targets)
 
-        f = fetch_function(name, functions)
-        output = f"prompt: {entry.prompt}\nname: {f.name}\nparameters:{"
-        f
+        definition = by_name[name]
+        json_partial = f'{{"name": "{name}", "parameters": {{'
 
-        results.append(name)
+        for i, (key, spec) in enumerate(definition.parameters.items()):
+            if i > 0:
+                json_partial += ", "
+            json_partial += f'"{key}": '
+            if spec.type == "string":
+                json_partial += '"'
+            prompt_js = build_prompt_js(json_partial, entry.prompt)
+            print(f"{prompt_js}\n")
+            prompt_js_ids = model.encode(prompt_js)[0].tolist()
+            if spec.type == "number":
+                temp = generator(model, prompt_js_ids, allowed_number_ids, vocab, None)
+            else:
+                temp = generator(model, prompt_js_ids, allowed_string_ids, vocab, None)
+            json_partial += temp
 
+        json_partial += "}}"
+        print(json_partial)
+        results.append(json_partial)
 
     return results

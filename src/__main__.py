@@ -43,8 +43,6 @@ def main() -> int:
 
     results = decoder(model, prompts, functions, vocab)
 
-    print(results)
-
     return 0
 
 if __name__ == "__main__":
