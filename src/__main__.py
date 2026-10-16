@@ -1,10 +1,11 @@
+import sys
+import json
 from argparse import Namespace, ArgumentParser
 from llm_sdk import Small_LLM_Model
-from .loader import load_functions, load_prompts
-import json
 from pydantic import ValidationError
+from pathlib import Path
+from .loader import load_functions, load_prompts
 from .decoder import decoder
-from .generator import generator
 from .vocab import load_vocab
 
 def parsing() -> Namespace:
@@ -21,22 +22,19 @@ def parsing() -> Namespace:
 
     return args
 
-def build_output(results: list[str], path: str):
-    output = []
-    for r in results:
-        dict = json.loads(r)
-        output.append(dict)
+def build_output(output: list[str], path: str) -> None:
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
 
     with open(path, 'w', encoding="utf-8") as f:
         json.dump(output, f, indent=4, ensure_ascii=False)
 
 def main() -> int:
-    model = Small_LLM_Model()
-    path = model.get_path_to_vocab_file()
-    vocab = load_vocab(path)
 
     args = parsing()
     try:
+        model = Small_LLM_Model()
+        path = model.get_path_to_vocab_file()
+        vocab = load_vocab(path)
         functions = load_functions(args.functions_definition)
         prompts = load_prompts(args.input)
         results = decoder(model, prompts, functions, vocab)
@@ -54,4 +52,4 @@ def main() -> int:
     return 0
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
