@@ -42,24 +42,29 @@ def is_number_prefix(string: str) -> bool:
     return True
 
 def is_number_complete(number: str) -> bool:
-    if number == "":
+    if number.endswith((".", "-")):
         return False
-    if len(number) > 0 and number in "0123456789":
-        return True
+    for n in number:
+        if n in ("0123456789"):
+            return True
     else:
         return False
-    
+
 def allowed_number_ids(prefix: str, vocab: dict[int, str], _targets: list[str]) -> set[int]:
     allowed = set()
-    if is_number_complete(prefix) is False:
-        for id, text in vocab.items():
-            if is_number_prefix(prefix + text):
-                allowed.add(id)
+    stop = set()
+    for id, text in vocab.items():
+        if is_number_prefix(prefix + text):
+            allowed.add(id)
+        if text == ',' or text == '}':
+            stop.add(id)
+    if is_number_complete(prefix):
+        allowed.update(stop)
     return allowed
 
-def is_string_prefix(string: str) -> bool:
-    for i, c in enumerate(string):
-        if ord(c) < 0x20:
+def is_string_prefix(text: str) -> bool:
+    for c in text:
+        if c in '"\\' or ord(c) < 0x20:
             return False
     return True
 
@@ -67,5 +72,7 @@ def allowed_string_ids(prefix: str, vocab: dict[int, str], _targets: list[str]) 
     allowed = set()
     for id, text in vocab.items():
         if is_string_prefix(prefix + text):
+            allowed.add(id)
+        if text == '"':
             allowed.add(id)
     return allowed

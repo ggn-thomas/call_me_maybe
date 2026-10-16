@@ -8,13 +8,14 @@ def generator(
     input_ids: list[int],
     allowed_functions: Callable,
     vocab: dict[int, str],
+    stops: set[str],
     functions_targets: list[str]
 ) -> str:
 
     prefix = ""
     ids = list(input_ids)
 
-    while True:
+    for _ in range(32):
         logits = model.get_logits_from_input_ids(ids)
         allowed = allowed_functions(prefix, vocab, functions_targets)
         if len(allowed) == 0:
@@ -23,7 +24,10 @@ def generator(
         for i in allowed:
             masked[i] = logits[i]
         best = int(masked.argmax())
-
+        text = vocab[best]
+        if text in stops:
+            break
         ids.append(best)
         prefix += vocab[best]
+
     return prefix

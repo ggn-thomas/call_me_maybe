@@ -21,6 +21,14 @@ def parsing() -> Namespace:
 
     return args
 
+def build_output(results: list[str], path: str):
+    output = []
+    for r in results:
+        dict = json.loads(r)
+        output.append(dict)
+
+    with open(path, 'w', encoding="utf-8") as f:
+        json.dump(output, f, indent=4, ensure_ascii=False)
 
 def main() -> int:
     model = Small_LLM_Model()
@@ -31,6 +39,8 @@ def main() -> int:
     try:
         functions = load_functions(args.functions_definition)
         prompts = load_prompts(args.input)
+        results = decoder(model, prompts, functions, vocab)
+        build_output(results, args.output)
     except FileNotFoundError as e:
         print(f"Error: file not found: {e.filename}")
         return 1
@@ -40,8 +50,6 @@ def main() -> int:
     except ValidationError as e:
         print(f"Error: unexpected file structure\n{e}")
         return 1
-
-    results = decoder(model, prompts, functions, vocab)
 
     return 0
 
