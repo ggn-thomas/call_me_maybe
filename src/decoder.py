@@ -1,9 +1,11 @@
-import json
 import sys
 from llm_sdk import Small_LLM_Model
 from .models import PromptEntry, FunctionDefinition
 from .generator import generator
 from .vocab import allowed_number_ids, allowed_string_ids, allowed_ids
+from functools import partial
+from typing import Any
+
 
 def build_header(functions: list[FunctionDefinition]) -> str:
     lines = []
@@ -11,19 +13,28 @@ def build_header(functions: list[FunctionDefinition]) -> str:
         lines.append(f"{f.name}: {f.description}")
     return "\n".join(lines)
 
+
 def build_prompt_ft(header: str, prompt: str) -> str:
-    return f'Choose the most suitable function for the prompt.\nPrompt: {prompt}\n{header}\nCall: {{"name": "'
+    return (
+        f'Choose the most suitable function for the prompt.\n'
+        f'Prompt: {prompt}\n{header}\nCall: {{"name": "'
+    )
+
 
 def build_prompt_js(json_partial: str, prompt: str) -> str:
-    return f'Complete the JSON object by extracting the appropriate parameter values from the prompt.\nPrompt:{prompt}\n{json_partial}'
+    return (
+        f'Complete the JSON object by extracting the appropriate '
+        f'parameter values from the prompt.\n'
+        f'Prompt:{prompt}\n{json_partial}'
+    )
 
-def fetch_function(name: str, functions: list[FunctionDefinition]) -> FunctionDefinition:
-    for f in functions:
-        if f.name == name:
-            return f
-    return None
 
-def decoder(model: Small_LLM_Model, prompts: list[PromptEntry], functions: list[FunctionDefinition], vocab: dict[int, str]) -> list[dict]:
+def decoder(
+        model: Small_LLM_Model,
+        prompts: list[PromptEntry],
+        functions: list[FunctionDefinition],
+        vocab: dict[int, str]
+) -> list[dict]:
     header = build_header(functions)
     ft_targets = [f.name for f in functions]
     by_name = {f.name: f for f in functions}
@@ -32,17 +43,24 @@ def decoder(model: Small_LLM_Model, prompts: list[PromptEntry], functions: list[
 
     try:
         for entry in prompts:
-            result = {}
+            result: dict[str, Any] = {}
             prompt_ft = build_prompt_ft(header, entry.prompt)
             prompt_ft_ids = model.encode(prompt_ft)[0].tolist()
-            name = generator(model, prompt_ft_ids, allowed_ids, vocab, '"', ft_targets)
+            name_mask = partial(allowed_ids, targets=ft_targets)
+            name = generator(
+                model,
+                prompt_ft_ids,
+                name_mask,
+                vocab,
+                {'"'},
+            )
             if not name:
-                raise RuntimeError(f"Empty function name for prompt")
+                raise RuntimeError("Empty function name for prompt")
             definition = by_name[name]
             json_partial = f'{{"name": "{name}", "parameters": {{'
             result["name"] = name
 
-            values = {}
+            values: dict[str, Any] = {}
             for i, (key, spec) in enumerate(definition.parameters.items()):
                 if i > 0:
                     json_partial += ", "
@@ -52,13 +70,25 @@ def decoder(model: Small_LLM_Model, prompts: list[PromptEntry], functions: list[
                 prompt_js = build_prompt_js(json_partial, entry.prompt)
                 prompt_js_ids = model.encode(prompt_js)[0].tolist()
                 if spec.type == "number":
-                    temp = generator(model, prompt_js_ids, allowed_number_ids, vocab, {',', '}'}, None)
+                    temp = generator(
+                        model,
+                        prompt_js_ids,
+                        allowed_number_ids,
+                        vocab,
+                        {',', '}'},
+                    )
                     if not temp:
                         temp = "0"
                     json_partial += temp
                     values[key] = float(temp)
                 else:
-                    temp = generator(model, prompt_js_ids, allowed_string_ids, vocab,{'"'}, None)
+                    temp = generator(
+                        model,
+                        prompt_js_ids,
+                        allowed_string_ids,
+                        vocab,
+                        {'"'},
+                    )
                     json_partial += temp
                     values[key] = temp
                     json_partial += '"'

@@ -27,3 +27,12 @@ dev = [
     "flake8>=7.4.1",
     "mypy>=2.4.0",
 ]
+
+[tool.mypy]
+exclude = ["^\\.venv/", "^llm_sdk/"]
+
+[[tool.mypy.overrides]]
+module = ["llm_sdk.*"]
+ignore_missing_imports = true
+follow_imports = "skip"
+

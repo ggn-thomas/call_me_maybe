@@ -1,15 +1,14 @@
-from .vocab import allowed_ids
 from llm_sdk import Small_LLM_Model
 import numpy as np
 from typing import Callable
 
+
 def generator(
     model: Small_LLM_Model,
     input_ids: list[int],
-    allowed_functions: Callable,
+    allowed_functions: Callable[[str, dict[int, str]], set[int]],
     vocab: dict[int, str],
     stops: set[str],
-    functions_targets: list[str]
 ) -> str:
 
     prefix = ""
@@ -17,7 +16,7 @@ def generator(
 
     for _ in range(32):
         logits = model.get_logits_from_input_ids(ids)
-        allowed = allowed_functions(prefix, vocab, functions_targets)
+        allowed = allowed_functions(prefix, vocab)
         if len(allowed) == 0:
             break
         masked = np.full(len(logits), -np.inf)

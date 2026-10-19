@@ -7,13 +7,15 @@ from pathlib import Path
 from .loader import load_functions, load_prompts
 from .decoder import decoder
 from .vocab import load_vocab
+from typing import Any
+
 
 def parsing() -> Namespace:
     parser = ArgumentParser()
     default_input = "data/input/function_calling_tests.json"
     default_functions = "data/input/functions_definition.json"
     default_output = "data/output/function_calling_results.json"
-    parser.add_argument('--functions_definition', type=str, 
+    parser.add_argument('--functions_definition', type=str,
                         default=default_functions)
     parser.add_argument('--input', type=str, default=default_input)
     parser.add_argument('--output', type=str, default=default_output)
@@ -22,11 +24,13 @@ def parsing() -> Namespace:
 
     return args
 
-def build_output(output: list[str], path: str) -> None:
+
+def build_output(output: list[dict[str, Any]], path: str) -> None:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
 
     with open(path, 'w', encoding="utf-8") as f:
         json.dump(output, f, indent=4, ensure_ascii=False)
+
 
 def main() -> int:
 
@@ -50,6 +54,7 @@ def main() -> int:
         return 1
 
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

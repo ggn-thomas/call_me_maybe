@@ -1,19 +1,29 @@
 import json
 
+
 def load_vocab(path: str) -> dict[int, str]:
     with open(path, encoding="utf-8") as f:
         raw = json.load(f)
-    vocab = {value: key.replace("Ġ", " ").replace("Ċ", "\n") for key, value in raw.items()}
+    vocab = {
+        value: key.replace("Ġ", " ").replace("Ċ", "\n")
+        for key, value in raw.items()
+    }
 
     return vocab
 
-def allowed_ids(prefix: str, vocab: dict[int, str], targets: list[str]) -> set[int]:
+
+def allowed_ids(
+        prefix: str,
+        vocab: dict[int, str],
+        targets: list[str]
+) -> set[int]:
     allowed = set()
     for id, text in vocab.items():
         if any(target.startswith(prefix + text) for target in targets):
             allowed.add(id)
 
     return allowed
+
 
 def is_number_prefix(string: str) -> bool:
     if string == "":
@@ -41,6 +51,7 @@ def is_number_prefix(string: str) -> bool:
             return False
     return True
 
+
 def is_number_complete(number: str) -> bool:
     if number.endswith((".", "-")):
         return False
@@ -50,7 +61,11 @@ def is_number_complete(number: str) -> bool:
     else:
         return False
 
-def allowed_number_ids(prefix: str, vocab: dict[int, str], _targets: list[str]) -> set[int]:
+
+def allowed_number_ids(
+        prefix: str,
+        vocab: dict[int, str],
+) -> set[int]:
     allowed = set()
     stop = set()
     for id, text in vocab.items():
@@ -62,13 +77,18 @@ def allowed_number_ids(prefix: str, vocab: dict[int, str], _targets: list[str]) 
         allowed.update(stop)
     return allowed
 
+
 def is_string_prefix(text: str) -> bool:
     for c in text:
         if c in '"\\' or ord(c) < 0x20:
             return False
     return True
 
-def allowed_string_ids(prefix: str, vocab: dict[int, str], _targets: list[str]) -> set[int]:
+
+def allowed_string_ids(
+        prefix: str,
+        vocab: dict[int, str],
+) -> set[int]:
     allowed = set()
     for id, text in vocab.items():
         if is_string_prefix(prefix + text):
