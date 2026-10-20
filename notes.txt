@@ -1,7 +1,0 @@
-Parsing
-    - pas de if, utiliser directement default= avec argparse
-
-1. parse_args() -> toujours
-2. drapeau ? sinon défaut -> argparse le fait seul
-3. trois chemins définitifs
-4. est-ce que les deux entrées existent?
